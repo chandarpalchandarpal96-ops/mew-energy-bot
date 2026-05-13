@@ -247,7 +247,7 @@ def run_claim_thread(wallets: list[dict], chat_id: int, fast_mode: bool = False)
     total_reward = 0
     total_action = 0
     start = time.time()
-    delay_info = "10 sec" if fast_mode else "~5.5 min"
+    delay_info = "10 sec" if fast_mode else "~2 min"
 
     _send_tg_message(chat_id, f"Claim cycle started for {total} wallets...\nDelay: {delay_info} per wallet")
 
@@ -319,7 +319,7 @@ def run_claim_thread(wallets: list[dict], chat_id: int, fast_mode: bool = False)
             if fast_mode:
                 delay = 10  # 10 seconds for scheduled auto-claim
             else:
-                delay = random.uniform(5.1 * 60, 5.9 * 60)  # 306-354 seconds
+                delay = random.uniform(2.0 * 60, 2.5 * 60)  # 120-150 seconds
             logger.info(f"  Waiting {delay:.0f}s before next wallet...")
             time.sleep(delay)
 
