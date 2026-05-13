@@ -91,3 +91,4 @@ docker run -d \
    - Claim bonus actions (`GET /energy/claim?action_id=2,3`) → +5 each
 3. Progress updates every 50 wallets via Telegram
 4. Summary sent on completion
+# Proxy rotation support added
