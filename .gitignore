@@ -8,3 +8,6 @@ proxies.txt
 *.egg-info/
 venv/
 .venv/
+.env
+wallets.json
+mnemonic_backup.txt

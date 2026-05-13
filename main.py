@@ -1,15 +1,11 @@
-"""FastAPI wrapper for MEW Energy Bot with scheduled daily claims."""
+"""FastAPI wrapper + Telegram Bot for MEW Energy Bot deployment."""
 
 import logging
 import threading
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
-from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import FastAPI
-
-from bot import run_claim_cycle
-from generate_wallets import main as generate_wallets
 
 logger = logging.getLogger("mew-bot")
 logging.basicConfig(
@@ -18,43 +14,28 @@ logging.basicConfig(
     handlers=[logging.StreamHandler()],
 )
 
-scheduler = BackgroundScheduler()
-last_run_result: dict = {"status": "not_started", "timestamp": None}
-run_lock = threading.Lock()
 
-
-def scheduled_claim():
-    global last_run_result
-    if not run_lock.acquire(blocking=False):
-        logger.info("Claim cycle already running. Skipping.")
-        return
+def start_telegram_bot():
+    """Start the Telegram bot in a background thread."""
     try:
-        logger.info("Scheduled claim cycle triggered.")
-        run_claim_cycle()
-        last_run_result = {
-            "status": "completed",
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-        }
+        import sys
+        import asyncio
+        if sys.version_info >= (3, 10):
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+        from tg_bot import main as tg_main
+        tg_main()
     except Exception as e:
-        logger.error(f"Scheduled claim failed: {e}", exc_info=True)
-        last_run_result = {
-            "status": "error",
-            "error": str(e),
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-        }
-    finally:
-        run_lock.release()
+        logger.error(f"Telegram bot failed: {e}", exc_info=True)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    generate_wallets()
-    scheduler.add_job(scheduled_claim, "interval", hours=24, id="daily_claim")
-    scheduler.start()
-    logger.info("Scheduler started. Running initial claim cycle...")
-    threading.Thread(target=scheduled_claim, daemon=True).start()
+    logger.info("Starting Telegram bot in background...")
+    bot_thread = threading.Thread(target=start_telegram_bot, daemon=True)
+    bot_thread.start()
     yield
-    scheduler.shutdown()
+    logger.info("Shutting down...")
 
 
 app = FastAPI(title="MEW Energy Bot", lifespan=lifespan)
@@ -63,9 +44,8 @@ app = FastAPI(title="MEW Energy Bot", lifespan=lifespan)
 @app.get("/")
 def root():
     return {
-        "service": "MEW Energy Bot",
+        "service": "MEW Energy Bot v3.1",
         "status": "running",
-        "last_run": last_run_result,
         "now": datetime.now(timezone.utc).isoformat(),
     }
 
@@ -73,12 +53,3 @@ def root():
 @app.get("/health")
 def health():
     return {"status": "ok"}
-
-
-@app.post("/trigger")
-def trigger_claim():
-    if not run_lock.acquire(blocking=False):
-        return {"status": "already_running"}
-    run_lock.release()
-    threading.Thread(target=scheduled_claim, daemon=True).start()
-    return {"status": "triggered"}
