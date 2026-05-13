@@ -1,0 +1,10 @@
+wallets.json
+uuids/
+logs/
+__pycache__/
+*.pyc
+.env
+proxies.txt
+*.egg-info/
+venv/
+.venv/
